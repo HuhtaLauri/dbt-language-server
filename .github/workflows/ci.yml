@@ -27,6 +27,8 @@ jobs:
   build:
     # Runs only when a version tag is pushed.
     if: github.event_name == 'push' && startsWith(github.event.ref, 'refs/tags/')
+    needs:
+      - test
     runs-on: ubuntu-latest
 
     steps:
