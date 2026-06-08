@@ -8,6 +8,7 @@ from dbt_ls.source import discover_sources, enrich_sources_from_catalog
 from pathlib import Path
 from dbt_ls.alias import parse_aliases
 import os
+from dbt_ls.project import Project
 
 # logging.basicConfig(filename='pygls.log', filemode='w', level=logging.DEBUG)
 logging.basicConfig(
@@ -25,11 +26,11 @@ __version__ = version("dbt-ls")
 server = LanguageServer("dbt-ls", __version__)
 
 
-def find_dbt_project_root(root: str) -> str | None:
+def find_dbt_project_root(root: str) -> str:
     for p in Path(root).rglob("dbt_project.yml"):
         if "target" not in p.parts:
             return str(p.parent)
-    return None
+    return "."
 
 
 @server.feature(types.INITIALIZE)
@@ -37,10 +38,12 @@ def on_initialize(params: types.InitializeParams):
     global models
     global sources
     global dbt_root
+    global project
     if params.root_path:
         dbt_root = find_dbt_project_root(params.root_path)
+        project = Project(dbt_root)
         catalog_path = Path(f"{dbt_root}/target/catalog.json")
-        models = discover_models(params.root_path)
+        models = discover_models(root=params.root_path, model_paths=project.model_paths)
         log.debug("Finished parsing documented models")
         sources = discover_sources(params.root_path)
         log.debug("Finished parsing documented sources")
@@ -98,7 +101,7 @@ def completions(params: types.CompletionParams):
                 s.name,
                 kind=types.CompletionItemKind(10),
                 label_details=types.CompletionItemLabelDetails(s.database),
-                insert_text=f'{s.source_name}", "{s.name}',  # Works only perfect with autocomplete, Fix later
+                insert_text=f'{s.source_name}", "{s.name}',
                 insert_text_format=types.InsertTextFormat.PlainText,
             )
             for s in sources
@@ -108,6 +111,9 @@ def completions(params: types.CompletionParams):
         alias_map = parse_aliases(document.source)
         model_name = alias_map.get(alias)
         log.info("COLUMN path: alias=%r → model=%r", alias, model_name)
+        # for m in (*models, *sources):
+        #     for c in m.columns:
+        #         log.debug(f"COLUMN found: {c}")
 
         return [
             types.CompletionItem(

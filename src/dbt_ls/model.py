@@ -11,11 +11,11 @@ class Model:
     columns: tuple[Column, ...] = ()
 
 
-def discover_models(root: str) -> list[Model]:
+def discover_models(root: str, model_paths: list[str]) -> list[Model]:
     return [
         Model(name=p.stem, path=str(p))
-        for p in Path(root).rglob("*.sql")
-        if "target" not in p.parts
+        for model_path in model_paths
+        for p in (Path(root) / model_path).rglob("*.sql")
     ]
 
 

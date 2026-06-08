@@ -2,7 +2,7 @@ from src.dbt_ls.model import discover_models, Model
 
 
 def test_discover_models():
-    models = discover_models("testdata")
+    models = discover_models("testdata/project", ["models"])
     assert set(models) == {
         Model(
             name="my_first_dbt_model",
