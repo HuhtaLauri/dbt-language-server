@@ -2,6 +2,13 @@ from dataclasses import dataclass
 from pathlib import Path
 from dbt_ls.column import Column
 import json
+from dbt_ls.profiles import ProfileTarget
+import ibis
+from ibis.expr.schema import Schema
+from ibis.expr.types.relations import (
+    Table,
+)
+from dbt_ls.profiles import DuckDBTarget, DatabaseTarget
 
 
 @dataclass(frozen=True)
@@ -42,3 +49,45 @@ def enrich_models_from_catalog(models: list[Model], catalog_path: Path) -> list[
         Model(name=m.name, path=m.path, columns=columns_by_name.get(m.name, m.columns))
         for m in models
     ]
+
+
+def get_duckdb_models(
+    models: list[Model], profile_target: DuckDBTarget, project_root: str | Path
+) -> list[Model] | None:
+    ibis.set_backend("duckdb")
+
+    connection_path = (
+        profile_target.path
+        if Path(profile_target.path).is_absolute()
+        else Path(project_root).joinpath(profile_target.path)
+    )
+    con = ibis.duckdb.connect(connection_path)
+
+    con = ibis.duckdb.connect("myproject/" + profile_target.path)
+    columns_by_name: dict[str, tuple[Column, ...]] = {}
+
+    tables = con.list_tables()
+    for t in tables:
+        table: Table = con.table(t)
+        schema: Schema = table.schema()
+
+        columns_by_name[t] = tuple(
+            Column(name=name, data_type=str(dtype)) for name, dtype in schema.items()
+        )
+
+    return [
+        Model(name=m.name, path=m.path, columns=columns_by_name.get(m.name, ()))
+        for m in models
+    ]
+
+
+def enrich_models_from_database(
+    models: list[Model],
+    profile_target: DuckDBTarget | DatabaseTarget,
+    project_root: str | Path,
+) -> list[Model] | None:
+    match profile_target:
+        case DuckDBTarget():
+            return get_duckdb_models(models, profile_target, project_root)
+        case _:
+            return None

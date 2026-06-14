@@ -5,11 +5,17 @@ import sys
 from lsprotocol import types
 from importlib.metadata import version
 from dbt_ls.pattern import completion_context, ref_model_at
-from dbt_ls.model import discover_models, enrich_models_from_catalog
+from dbt_ls.model import (
+    discover_models,
+    enrich_models_from_database,
+)
 from dbt_ls.source import discover_sources, enrich_sources_from_catalog
 from pathlib import Path
 from dbt_ls.alias import parse_aliases
 from dbt_ls.project import Project
+from dbt_ls.profiles import Profiles
+import debugpy
+import argparse
 
 logging.basicConfig(
     stream=sys.stderr,
@@ -38,18 +44,27 @@ def on_initialize(params: types.InitializeParams):
     global sources
     global dbt_root
     global project
+
     if params.root_path:
         dbt_root = find_dbt_project_root(params.root_path)
         project = Project(dbt_root)
         catalog_path = Path(f"{dbt_root}/target/catalog.json")
+
+        profile = Profiles.locate(project.root)
+        profile_target = profile.resolve(project.profile) if profile else None
+
         models = discover_models(root=params.root_path, model_paths=project.model_paths)
         log.debug("Finished parsing documented models")
         sources = discover_sources(params.root_path)
         log.debug("Finished parsing documented sources")
-        models = enrich_models_from_catalog(models, catalog_path)
-        log.debug("Finished parsing column info for models from catalog")
         sources = enrich_sources_from_catalog(sources, catalog_path)
         log.debug("Finished parsing column info for sources from catalog")
+        database_models = enrich_models_from_database(
+            models, profile_target, project.root
+        )
+        if database_models:
+            models = database_models
+        log.debug("Finished parsing column info for models from database")
 
 
 @server.feature(
@@ -112,9 +127,6 @@ def completions(params: types.CompletionParams):
         alias_map = parse_aliases(document.source)
         model_name = alias_map.get(alias)
         log.info("COLUMN path: alias=%r → model=%r", alias, model_name)
-        # for m in (*models, *sources):
-        #     for c in m.columns:
-        #         log.debug(f"COLUMN found: {c}")
 
         return [
             types.CompletionItem(
@@ -170,8 +182,19 @@ def main():
    ╚═══════════════════════════════════════╝
     """
     print(banner)
+
+    p = argparse.ArgumentParser()
+    p.add_argument("--tcp", action="store_true")
+    p.add_argument("--host", default="127.0.0.1")
+    p.add_argument("--port", type=int, default=8765)
+    args = p.parse_args()
+    if args.tcp:
+        debugpy.listen(("127.0.0.1", 5678))
+        debugpy.wait_for_client()
+        server.start_tcp(args.host, args.port)
+    else:
+        server.start_io()
     logging.info("DBT Language Server started")
-    server.start_io()
 
 
 if __name__ == "__main__":

@@ -1,6 +1,7 @@
 import yaml
 import os
 
+
 class Project:
     def __init__(self, root: str = "."):
         self.root = root
@@ -15,3 +16,6 @@ class Project:
     def model_paths(self) -> list[str]:
         return self.config.get("model-paths", [])
 
+    @property
+    def profile(self) -> str:
+        return self.config.get("profile", "")
