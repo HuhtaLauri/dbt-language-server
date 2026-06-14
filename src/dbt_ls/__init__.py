@@ -14,7 +14,6 @@ from pathlib import Path
 from dbt_ls.alias import parse_aliases
 from dbt_ls.project import Project
 from dbt_ls.profiles import Profiles
-import debugpy
 import argparse
 
 logging.basicConfig(
@@ -189,8 +188,6 @@ def main():
     p.add_argument("--port", type=int, default=8765)
     args = p.parse_args()
     if args.tcp:
-        debugpy.listen(("127.0.0.1", 5678))
-        debugpy.wait_for_client()
         server.start_tcp(args.host, args.port)
     else:
         server.start_io()
