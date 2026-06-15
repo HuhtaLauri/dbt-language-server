@@ -9,6 +9,8 @@ from ibis.expr.types.relations import (
     Table,
 )
 from dbt_ls.profiles import DuckDBTarget, DatabaseTarget
+from typing import Callable, Any
+from ibis import BaseBackend
 
 
 @dataclass(frozen=True)
@@ -63,7 +65,34 @@ def get_duckdb_models(
     )
     con = ibis.duckdb.connect(connection_path)
 
-    con = ibis.duckdb.connect("myproject/" + profile_target.path)
+    return _get_database_schema(models, con)
+
+
+def get_database_models(
+    models: list[Model], profile_target: DatabaseTarget, project_root: str | Path
+) -> list[Model] | None:
+
+    # TODO: Make this work on every database
+    con = ibis.postgres.connect(
+        user=profile_target.user,
+        password=profile_target.password.reveal(),
+        host=profile_target.host,
+        port=profile_target.port,
+        database=profile_target.dbname,
+        schema=profile_target.schema,
+    )
+
+    return _get_database_schema(models, con)
+
+
+_DATABASE_METHOD_REGISTRY: dict[
+    str,
+    Callable[..., list[Model] | None],
+] = {"duckdb": get_duckdb_models, "postgres": get_database_models}
+
+
+def _get_database_schema(models: list[Model], con: BaseBackend) -> list[Model]:
+
     columns_by_name: dict[str, tuple[Column, ...]] = {}
 
     tables = con.list_tables()
@@ -86,8 +115,7 @@ def enrich_models_from_database(
     profile_target: DuckDBTarget | DatabaseTarget,
     project_root: str | Path,
 ) -> list[Model] | None:
-    match profile_target:
-        case DuckDBTarget():
-            return get_duckdb_models(models, profile_target, project_root)
-        case _:
-            return None
+    fn = _DATABASE_METHOD_REGISTRY.get(profile_target.type)
+    if fn is None:
+        return None
+    return fn(models, profile_target, project_root)

@@ -1,7 +1,25 @@
 from pathlib import Path
-from dataclasses import dataclass, fields
+from dataclasses import dataclass, fields, field
 import yaml
 from typing import Any
+
+
+class Secret:
+    __slots__ = ("_value",)
+
+    def __init__(self, value: str) -> None:
+        self._value = value
+
+    def reveal(self) -> str:
+        return self._value
+
+    def __repr__(self) -> str:
+        return "********"
+
+    __str__ = __repr__
+
+    def __format__(self, _spec: str) -> str:
+        return self.__repr__()
 
 
 @dataclass(kw_only=True)
@@ -13,25 +31,25 @@ class ProfileTarget:
     def from_dict(cls, data: dict) -> "ProfileTarget":
         target_cls = _TARGET_REGISTRY.get(data.get("type", ""), cls)
         allowed = {f.name for f in fields(target_cls)}
-        return target_cls(**{k: v for k, v in data.items() if k in allowed})
+        kwargs = {k: v for k, v in data.items() if k in allowed}
+        if isinstance(kwargs.get("password"), str):
+            kwargs["password"] = Secret(kwargs["password"])
+        return target_cls(**kwargs)
 
 
 @dataclass(kw_only=True)
 class DuckDBTarget(ProfileTarget):
     path: str
 
-    # def __post_init__(self):
-    #     if not Path(self.path).is_absolute():
-    #         self.path = str(Path("root").joinpath(self.path))
-
 
 @dataclass(kw_only=True)
 class DatabaseTarget(ProfileTarget):
     user: str
-    password: str
+    password: Secret
     host: str
     port: int
     dbname: str
+    schema: str
 
 
 _TARGET_REGISTRY: dict[str, type[ProfileTarget]] = {
