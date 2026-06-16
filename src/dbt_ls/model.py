@@ -8,7 +8,7 @@ from ibis.expr.schema import Schema
 from ibis.expr.types.relations import (
     Table,
 )
-from dbt_ls.profiles import DuckDBTarget, DatabaseTarget
+from dbt_ls.profiles import DuckDBTarget, DatabaseTarget, MySQLTarget
 from typing import Callable, Any
 from ibis import BaseBackend
 
@@ -85,10 +85,29 @@ def get_database_models(
     return _get_database_schema(models, con)
 
 
+def get_mysql_models(
+    models: list[Model], profile_target: MySQLTarget, project_root: str | Path
+) -> list[Model] | None:
+
+    con = ibis.mysql.connect(
+        user=profile_target.user,
+        password=profile_target.password.reveal(),
+        host=profile_target.server,
+        port=profile_target.port,
+        database=profile_target.schema,
+    )
+
+    return _get_database_schema(models, con)
+
+
 _DATABASE_METHOD_REGISTRY: dict[
     str,
     Callable[..., list[Model] | None],
-] = {"duckdb": get_duckdb_models, "postgres": get_database_models}
+] = {
+    "duckdb": get_duckdb_models,
+    "postgres": get_database_models,
+    "mysql": get_mysql_models,
+}
 
 
 def _get_database_schema(models: list[Model], con: BaseBackend) -> list[Model]:

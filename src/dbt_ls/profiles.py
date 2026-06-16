@@ -52,9 +52,19 @@ class DatabaseTarget(ProfileTarget):
     schema: str
 
 
+@dataclass(kw_only=True)
+class MySQLTarget(ProfileTarget):
+    user: str
+    password: Secret
+    server: str #TODO: Fix so takes server or host key
+    port: int
+    schema: str
+
+
 _TARGET_REGISTRY: dict[str, type[ProfileTarget]] = {
     "duckdb": DuckDBTarget,
     "postgres": DatabaseTarget,
+    "mysql": MySQLTarget,
 }
 
 
