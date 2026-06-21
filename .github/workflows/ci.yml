@@ -23,7 +23,7 @@ jobs:
       - run: uv sync
 
       - name: Run tests
-        run: pytest -vv
+        run: uv run pytest -vv
 
   build:
     # Runs only when a version tag is pushed.
