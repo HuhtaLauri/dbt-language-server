@@ -140,6 +140,7 @@ def _get_database_schema(models: list[Model], con: BaseBackend) -> list[Model]:
         columns_by_name[t] = tuple(
             Column(name=name, data_type=str(dtype)) for name, dtype in schema.items()
         )
+    breakpoint()
 
     return [
         Model(name=m.name, path=m.path, columns=columns_by_name.get(m.name, ()))
@@ -149,7 +150,9 @@ def _get_database_schema(models: list[Model], con: BaseBackend) -> list[Model]:
 
 def enrich_models_from_database(
     models: list[Model],
-    profile_target: DuckDBTarget | DatabaseTarget,
+    profile_target: (
+        DuckDBTarget | DatabaseTarget | MSSQLTarget | MySQLTarget | ProfileTarget
+    ),
     project_root: str | Path,
 ) -> list[Model] | None:
     fn = _DATABASE_METHOD_REGISTRY.get(profile_target.type)

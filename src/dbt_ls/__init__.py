@@ -44,23 +44,57 @@ def on_initialize(params: types.InitializeParams):
     global dbt_root
     global project
 
-    if params.root_path:
-        dbt_root = find_dbt_project_root(params.root_path)
-        project = Project(dbt_root)
-        catalog_path = Path(f"{dbt_root}/target/catalog.json")
+    if not params.root_path:
+        log.warning("Initialize received no root_path; skipping project discovery")
+        return
 
-        profile = Profiles.locate(project.root)
-        profile_target = profile.resolve(project.profile) if profile else None
+    dbt_root = find_dbt_project_root(params.root_path)
+    if not dbt_root:
+        log.warning(
+            "No dbt project root found under %s; skipping discovery", params.root_path
+        )
+        return
 
-        models = discover_models(root=params.root_path, model_paths=project.model_paths)
-        log.debug("Finished parsing documented models")
-        sources = discover_sources(params.root_path)
-        log.debug("Finished parsing documented sources")
+    project = Project(dbt_root)
+
+    # Models and sources don't need the profile, so resolve them unconditionally.
+    models = discover_models(root=params.root_path, model_paths=project.model_paths)
+    log.debug("Finished parsing documented models")
+
+    sources = discover_sources(params.root_path)
+    log.debug("Finished parsing documented sources")
+
+    # Catalog enrichment — only if the catalog has actually been generated.
+    catalog_path = Path(dbt_root) / "target" / "catalog.json"
+    if catalog_path.is_file():
         sources = enrich_sources_from_catalog(sources, catalog_path)
         log.debug("Finished parsing column info for sources from catalog")
+    else:
+        log.info("No catalog.json at %s; skipping catalog enrichment", catalog_path)
+
+    # Database enrichment — needs a fully resolved profile target.
+    profile = Profiles.locate(project.root)
+    if not profile:
+        log.info("No dbt profile located; skipping database enrichment")
+        return
+
+    profile_target = profile.resolve(project.profile)
+    if not profile_target:
+        log.info(
+            "Profile %r resolved to an empty target; skipping database enrichment",
+            project.profile,
+        )
+        return
+
+    try:
         database_models = enrich_models_from_database(
             models, profile_target, project.root
         )
+    except Exception:  # noqa: BLE001 — enrichment must never crash initialize
+        log.exception(
+            "Database enrichment failed; continuing with documented models only"
+        )
+    else:
         if database_models:
             models = database_models
         log.debug("Finished parsing column info for models from database")
