@@ -1,6 +1,6 @@
 [project]
 name = "dbt-ls"
-version = "0.1.5"
+version = "0.1.6"
 description = "Databse aware DBT Language Server"
 readme = "README.md"
 authors = [

@@ -140,7 +140,6 @@ def _get_database_schema(models: list[Model], con: BaseBackend) -> list[Model]:
         columns_by_name[t] = tuple(
             Column(name=name, data_type=str(dtype)) for name, dtype in schema.items()
         )
-    breakpoint()
 
     return [
         Model(name=m.name, path=m.path, columns=columns_by_name.get(m.name, ()))
