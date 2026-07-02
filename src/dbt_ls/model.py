@@ -12,6 +12,8 @@ from dbt_ls.profiles import DuckDBTarget, DatabaseTarget, MySQLTarget, MSSQLTarg
 from typing import Callable, Any
 from ibis import BaseBackend
 
+from dbt_ls.source import SourceTable
+
 
 @dataclass(frozen=True)
 class Model:
@@ -128,7 +130,9 @@ _DATABASE_METHOD_REGISTRY: dict[
 }
 
 
-def _get_database_schema(models: list[Model], con: BaseBackend) -> list[Model]:
+def _get_database_schema(
+    models: list[Model], con: BaseBackend
+) -> tuple[list[Model], list[SourceTable]]:
 
     columns_by_name: dict[str, tuple[Column, ...]] = {}
 
@@ -141,10 +145,18 @@ def _get_database_schema(models: list[Model], con: BaseBackend) -> list[Model]:
             Column(name=name, data_type=str(dtype)) for name, dtype in schema.items()
         )
 
-    return [
-        Model(name=m.name, path=m.path, columns=columns_by_name.get(m.name, ()))
-        for m in models
-    ]
+    leftover_sources = columns_by_name.keys() - [m.name for m in models]
+
+    return (
+        [
+            Model(name=m.name, path=m.path, columns=columns_by_name.get(m.name, ()))
+            for m in models
+        ],
+        [
+            SourceTable(name=s, source_name=s, columns=columns_by_name.get(s, ()))
+            for s in leftover_sources
+        ],
+    )
 
 
 def enrich_models_from_database(

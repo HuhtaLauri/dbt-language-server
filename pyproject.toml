@@ -1,6 +1,6 @@
 [project]
 name = "dbt-ls"
-version = "0.1.6"
+version = "0.1.7"
 description = "Databse aware DBT Language Server"
 readme = "README.md"
 authors = [
@@ -11,6 +11,7 @@ dependencies = [
     "ibis-framework>=12.0.0",
     "pygls>=2.1.1",
     "pyyaml>=6.0.3",
+    "ibis-framework[duckdb,postgres,mysql,mssql]>=12.0.0",
 ]
 
 [dependency-groups]

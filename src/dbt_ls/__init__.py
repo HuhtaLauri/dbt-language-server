@@ -87,7 +87,7 @@ def on_initialize(params: types.InitializeParams):
         return
 
     try:
-        database_models = enrich_models_from_database(
+        database_models, leftover_sources = enrich_models_from_database(
             models, profile_target, project.root
         )
     except Exception:  # noqa: BLE001 — enrichment must never crash initialize
@@ -97,6 +97,9 @@ def on_initialize(params: types.InitializeParams):
     else:
         if database_models:
             models = database_models
+        if leftover_sources:
+            sources = leftover_sources
+            log.debug("Replaced sources with leftover sources")
         log.debug("Finished parsing column info for models from database")
 
 
