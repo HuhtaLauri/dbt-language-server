@@ -9,9 +9,10 @@ from ibis.expr.types.relations import (
     Table,
 )
 from dbt_ls.profiles import DuckDBTarget, DatabaseTarget, MySQLTarget, MSSQLTarget
-from typing import Callable, Any
+from typing import Callable
 from ibis import BaseBackend
 
+from dbt_ls.project import Project
 from dbt_ls.source import SourceTable
 import os
 
@@ -19,20 +20,30 @@ import os
 @dataclass(frozen=True)
 class Model:
     name: str
-    path: str
+    path: Path
     columns: tuple[Column, ...] = ()
 
     def __repr__(self):
-        return f"Model: {self.name}, Path: {self.path}, Exec path: {self.exec_path}"
+        return f"Model: {self.name}, Path: {self.path}"
 
-    @property
-    def exec_path(self) -> str:
-        return self.path.split("models/")[-1].split(".sql")[0].replace(os.sep, ".")
+    @staticmethod
+    def get_exec_path(path: Path, project: Project) -> str | None:
+        """
+        Return model exec path relative to dbt project root
+        /home/me/repos/datainc/dbt_datainc/models/staging/stg_cards.sql
+            => staging.stg_cards
+        """
+        for model_path in project.model_paths:
+            full_model_path = os.path.join(project.root, model_path)
+            if full_model_path in str(path):
+                return ".".join(path.relative_to(full_model_path).with_suffix("").parts)
+
+        return None
 
 
 def discover_models(root: str, model_paths: list[str]) -> list[Model]:
     return [
-        Model(name=p.stem, path=str(p))
+        Model(name=p.stem, path=p)
         for model_path in model_paths
         for p in (Path(root) / model_path).rglob("*.sql")
     ]
@@ -82,7 +93,6 @@ def get_database_models(
     models: list[Model], profile_target: DatabaseTarget, project_root: str | Path
 ) -> list[Model] | None:
 
-    # TODO: Make this work on every database
     con = ibis.postgres.connect(
         user=profile_target.user,
         password=profile_target.password.reveal(),

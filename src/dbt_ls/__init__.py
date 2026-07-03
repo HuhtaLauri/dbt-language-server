@@ -119,9 +119,14 @@ def reload(ls: LanguageServer):
 @server.command("dbt-ls.current_model")
 def current_model(model_uri):
     path = to_fs_path(model_uri)
-    candidate_model = [model for model in models if path == model.path]
+    candidate_model = [model for model in models if path == str(model.path)]
     return (
-        {"dbt_root": dbt_root, "exec_path": candidate_model[0].exec_path}
+        {
+            "dbt_root": dbt_root,
+            "exec_path": candidate_model[0].get_exec_path(
+                candidate_model[0].path, project
+            ),
+        }
         if candidate_model
         else None
     )
