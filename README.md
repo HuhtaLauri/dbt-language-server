@@ -16,3 +16,17 @@ vim.lsp.enable("dbt_ls")
 
 ~~~
 
+## Supported backends
+- DuckDB
+- SQL Server / MSSQL
+- PostgreSQL
+- MySQL
+
+Install each version with 
+~~~sh
+uv tool install dbt-ls[duckdb]
+~~~
+or all supported backends with
+~~~sh
+uv tool install dbt-ls[all]
+~~~

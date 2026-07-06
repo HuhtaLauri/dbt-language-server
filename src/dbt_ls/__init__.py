@@ -90,6 +90,13 @@ def load_project(ls: LanguageServer):
         database_models, leftover_sources = enrich_models_from_database(
             models, profile_target, project.root
         )
+    except ImportError:
+        log.warning(
+            "Database enrichment skipped: the backend for this profile isn't "
+            "installed. Install the matching extra, e.g. "
+            "`pip install dbt-ls[postgres]`, then restart. "
+            "Continuing with documented models only."
+        )
     except Exception:  # noqa: BLE001 — enrichment must never crash initialize
         log.exception(
             "Database enrichment failed; continuing with documented models only"
