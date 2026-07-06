@@ -192,7 +192,7 @@ def completions(params: types.CompletionParams):
             types.CompletionItem(
                 s.name,
                 kind=types.CompletionItemKind(10),
-                label_details=types.CompletionItemLabelDetails(s.database),
+                label_details=types.CompletionItemLabelDetails(s.source_name),
                 insert_text=f'{s.source_name}", "{s.name}',
                 insert_text_format=types.InsertTextFormat.PlainText,
             )

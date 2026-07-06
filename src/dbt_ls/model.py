@@ -171,7 +171,9 @@ def _get_database_schema(
             for m in models
         ],
         [
-            SourceTable(name=s, source_name="<unknown>", columns=columns_by_name.get(s, ()))
+            SourceTable(
+                name=s, source_name="<unknown>", columns=columns_by_name.get(s, ())
+            )
             for s in leftover_sources
         ],
     )

@@ -1,5 +1,21 @@
 # DBT-Language-Server
 
+## Features
+
+| Feature | LSP method / command | Description |
+| --- | --- | --- |
+| Model completion | `textDocument/completion` | Suggests dbt models inside `ref('...')` |
+| Source completion | `textDocument/completion` | Suggests sources inside `source('...')`, auto-inserting the `source_name`, `table` pair   |
+| Column completion | `textDocument/completion` | Suggests columns for an aliased model/source (`alias.<column>`), with the column's data type shown as a detail. |
+| Go to definition | `textDocument/definition` | Jumps from `ref('model')` to that model's `.sql` file. |
+| Database enrichment | on `initialize` | Reads column names and data types for models directly from the connected warehouse. |
+| Catalog enrichment | on `initialize` | Reads source column info from `target/catalog.json` when available. |
+| Profile resolution | on `initialize` | Locates the dbt profile, resolves the active target    |
+| Auto project discovery | on `initialize` | Finds the dbt project root by locating `dbt_project.yml` (ignoring `target/`). |
+| Project reload | `dbt-ls.reload` command | Re-discovers models, sources, and re-runs enrichment without restarting the server. |
+| Current model info | `dbt-ls.current_model` command | Returns the dbt project root and the model's execution path for the current file. (Can be used to run models)   |
+
+
 ## Installation
 ~~~sh
 uv tool install dbt-ls
