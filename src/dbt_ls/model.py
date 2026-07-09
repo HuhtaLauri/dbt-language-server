@@ -8,7 +8,14 @@ from ibis.expr.schema import Schema
 from ibis.expr.types.relations import (
     Table,
 )
-from dbt_ls.profiles import DuckDBTarget, DatabaseTarget, MySQLTarget, MSSQLTarget
+from dbt_ls.profiles import (
+    DuckDBTarget,
+    DatabaseTarget,
+    MySQLTarget,
+    MSSQLTarget,
+    SparkTarget,
+    DatabricksTarget,
+)
 from typing import Callable
 from ibis import BaseBackend
 
@@ -137,6 +144,36 @@ def get_mssql_models(
     return _get_database_schema(models, con)
 
 
+def get_spark_models(
+    models: list[Model], profile_target: SparkTarget, project_root: str | Path
+) -> tuple[list[Model], list[SourceTable]]:
+    from pyspark.sql import SparkSession
+
+    spark = (
+        SparkSession.builder
+        .remote(profile_target.host)
+            .appName("dbt-ls")
+            .getOrCreate()
+    )
+
+    con = ibis.pyspark.connect(session=spark)
+
+    return _get_database_schema(models, con)
+
+
+def get_databricks_models(
+    models: list[Model], profile_target: DatabricksTarget, project_root: str | Path
+) -> tuple[list[Model], list[SourceTable]]:
+
+    con = ibis.databricks.connect(
+        server_hostname=profile_target.host,
+        http_path=profile_target.http_path,
+        access_token=profile_target.token,
+    )
+
+    return _get_database_schema(models, con)
+
+
 _DATABASE_METHOD_REGISTRY: dict[
     str,
     Callable[..., tuple[list[Model], list[SourceTable]]],
@@ -145,6 +182,8 @@ _DATABASE_METHOD_REGISTRY: dict[
     "postgres": get_database_models,
     "mysql": get_mysql_models,
     "sqlserver": get_mssql_models,
+    "spark": get_spark_models,
+    "databricks": get_databricks_models,
 }
 
 

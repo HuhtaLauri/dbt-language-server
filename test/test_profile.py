@@ -6,6 +6,8 @@ from dbt_ls.profiles import (
     Secret,
     DatabaseTarget,
     MSSQLTarget,
+    SparkTarget,
+    DatabricksTarget,
 )
 
 
@@ -84,8 +86,69 @@ from dbt_ls.profiles import (
                 encrypt=False,
             ),
         ),
+        pytest.param(
+            {
+                "type": "spark",
+                "method": "session",
+                "host": "localhost",
+                "schema": "default",
+            },
+            SparkTarget(
+                type="spark", method="session", host="localhost", schema="default"
+            ),
+        ),
+        pytest.param(
+            {
+                "type": "databricks",
+                "catalog": "mycatalog",
+                "schema": "default",
+                "host": "https://adb-23452935842.2.azuredatabricks.net",
+                "http_path": "/sql/1.0/warehouses/29348rw7edf",
+                "token": "mytoken",
+                "threads": 1,
+            },
+            DatabricksTarget(
+                type="databricks",
+                catalog="mycatalog",
+                schema="default",
+                host="https://adb-23452935842.2.azuredatabricks.net",
+                http_path="/sql/1.0/warehouses/29348rw7edf",
+                token=Secret("mytoken"),
+                threads=1,
+            ),
+        ),
+        pytest.param(
+            {
+                "type": "databricks",
+                "catalog": "mycatalog",
+                "schema": "default",
+                "host": "https://adb-23452935842.2.azuredatabricks.net",
+                "http_path": "/sql/1.0/warehouses/29348rw7edf",
+                "client_id": "clientid123",
+                "client_secret": "clientsecret123",
+                "threads": 1,
+            },
+            DatabricksTarget(
+                type="databricks",
+                catalog="mycatalog",
+                schema="default",
+                host="https://adb-23452935842.2.azuredatabricks.net",
+                http_path="/sql/1.0/warehouses/29348rw7edf",
+                client_id="clientid123",
+                client_secret=Secret("clientsecret123"),
+                threads=1,
+            ),
+        ),
     ],
-    ids=["duckdb", "mysql", "postgres", "sqlserver"],
+    ids=[
+        "duckdb",
+        "mysql",
+        "postgres",
+        "sqlserver",
+        "spark",
+        "databrickstoken",
+        "databricksoauth",
+    ],
 )
 def test_target_from_dict(target_dict, expected):
     assert ProfileTarget.from_dict(target_dict) == expected

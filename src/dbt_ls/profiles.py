@@ -105,8 +105,10 @@ class ProfileTarget:
             except (ValueError, TypeError) as exc:
                 raise ValueError(f"profile field {k!r}: {exc}") from exc
 
-        if isinstance(kwargs.get("password"), str):
-            kwargs["password"] = Secret(kwargs["password"])
+        SECRET_FIELDS = {"password", "token", "client_secret"}
+        for name in SECRET_FIELDS:
+            if isinstance(kwargs.get(name), str):
+                kwargs[name] = Secret(kwargs[name])
 
         return target_cls(**kwargs)
 
@@ -147,11 +149,40 @@ class MSSQLTarget(ProfileTarget):
     encrypt: bool
 
 
+@dataclass(kw_only=True)
+class SparkTarget(ProfileTarget):
+    method: str = "session"
+    host: str
+    schema: str
+
+
+@dataclass(kw_only=True)
+class DatabricksTarget(ProfileTarget):
+    catalog: str
+    schema: str
+    host: str
+    http_path: str
+    token: Secret | None = None
+    client_id: str | None = None
+    client_secret: Secret | None = None
+
+    def __post_init__(self):
+        has_token = self.token is not None
+        has_oauth = self.client_id is not None and self.client_secret is not None
+        if has_token == has_oauth:
+            raise ValueError(
+                "databricks target needs either `token` or "
+                "`client_id`+`client_secret`, not both"
+            )
+
+
 _TARGET_REGISTRY: dict[str, type[ProfileTarget]] = {
     "duckdb": DuckDBTarget,
     "postgres": DatabaseTarget,
     "mysql": MySQLTarget,
     "sqlserver": MSSQLTarget,
+    "spark": SparkTarget,
+    "databricks": DatabricksTarget,
 }
 
 
