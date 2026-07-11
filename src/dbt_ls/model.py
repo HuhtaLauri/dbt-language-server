@@ -150,10 +150,7 @@ def get_spark_models(
     from pyspark.sql import SparkSession
 
     spark = (
-        SparkSession.builder
-        .remote(profile_target.host)
-            .appName("dbt-ls")
-            .getOrCreate()
+        SparkSession.builder.remote(profile_target.host).appName("dbt-ls").getOrCreate()
     )
 
     con = ibis.pyspark.connect(session=spark)
@@ -165,13 +162,57 @@ def get_databricks_models(
     models: list[Model], profile_target: DatabricksTarget, project_root: str | Path
 ) -> tuple[list[Model], list[SourceTable]]:
 
-    con = ibis.databricks.connect(
-        server_hostname=profile_target.host,
-        http_path=profile_target.http_path,
-        access_token=profile_target.token,
-    )
+    from databricks.sdk import WorkspaceClient
+    from databricks.sdk.core import Config
 
-    return _get_database_schema(models, con)
+    if profile_target.token:
+        w = WorkspaceClient(
+            host=profile_target.host,
+            token=profile_target.token.reveal(),
+            auth_type="pat",
+        )
+    else:
+        w = WorkspaceClient(
+            config=Config(
+                host=profile_target.host,
+                client_id=profile_target.client_id,
+                client_secret=profile_target.client_secret.reveal(),
+            )
+        )
+
+    def _get_databricks_schema(
+        models: list[Model],
+        workspace: WorkspaceClient,
+        profile_target: DatabricksTarget,
+    ) -> tuple[list[Model], list[SourceTable]]:
+
+        columns_by_name: dict[str, tuple[Column, ...]] = {}
+
+        tables = workspace.tables.list(
+            catalog_name=profile_target.catalog, schema_name=profile_target.schema
+        )
+
+        for t in tables:
+            columns_by_name[t.name] = tuple(
+                Column(name=c.name, data_type=c.type_text) for c in (t.columns or [])
+            )
+
+        leftover_sources = columns_by_name.keys() - [m.name for m in models]
+
+        return (
+            [
+                Model(name=m.name, path=m.path, columns=columns_by_name.get(m.name, ()))
+                for m in models
+            ],
+            [
+                SourceTable(
+                    name=s, source_name="<unknown>", columns=columns_by_name.get(s, ())
+                )
+                for s in leftover_sources
+            ],
+        )
+
+    return _get_databricks_schema(models, w, profile_target)
 
 
 _DATABASE_METHOD_REGISTRY: dict[

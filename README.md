@@ -37,6 +37,8 @@ vim.lsp.enable("dbt_ls")
 - SQL Server / MSSQL
 - PostgreSQL
 - MySQL
+- Spark (Spark Connect, no auth)
+- Databricks
 
 Install each version with 
 ~~~sh
@@ -46,3 +48,10 @@ or all supported backends with
 ~~~sh
 uv tool install dbt-ls[all]
 ~~~
+
+### Databricks authentication
+> [!IMPORTANT]
+> Databricks supports two auth methods, resolved from your dbt profile:
+>
+> - **Personal access token** — set `token` in the target.
+> - **Service principal OAuth (M2M)** — set `client_id` and `client_secret` in the target. Used automatically when no `token` is present.

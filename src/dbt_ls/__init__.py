@@ -111,7 +111,7 @@ def load_project(ls: LanguageServer):
             )
             sources = documented_sources
             log.debug("Replaced sources with leftover sources")
-        log.debug("Finished parsing column info for models from database")
+        log.info("Finished parsing column info for models from database")
 
 
 @server.feature(types.INITIALIZE)
