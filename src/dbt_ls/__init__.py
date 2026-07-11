@@ -17,6 +17,7 @@ from dbt_ls.alias import parse_aliases
 from dbt_ls.project import Project
 from dbt_ls.profiles import Profiles
 import argparse
+import uuid
 
 logging.basicConfig(
     stream=sys.stderr,
@@ -40,6 +41,22 @@ def find_dbt_project_root(root: str) -> str:
 
 
 def load_project(ls: LanguageServer):
+    
+    # Progress report setup
+    token = "reload-project" + str(uuid.uuid4())
+
+    if (
+        ls.client_capabilities.window
+        and ls.client_capabilities.window.work_done_progress
+    ):
+        ls.work_done_progress.create(token)
+        ls.work_done_progress.begin(
+            token,
+            types.WorkDoneProgressBegin(
+                title="Loading dbt project", cancellable=False, percentage=0
+            ),
+        )
+
     global models
     global sources
     global dbt_root
@@ -77,6 +94,7 @@ def load_project(ls: LanguageServer):
     profile = Profiles.locate(project.root)
     if not profile:
         log.info("No dbt profile located; skipping database enrichment")
+        ls.work_done_progress.end(token, types.WorkDoneProgressEnd(message="❌No profile found"))
         return
 
     profile_target = profile.resolve(project.profile)
@@ -85,6 +103,7 @@ def load_project(ls: LanguageServer):
             "Profile %r resolved to an empty target; skipping database enrichment",
             project.profile,
         )
+        ls.work_done_progress.end(token, types.WorkDoneProgressEnd(message="❌Target empty"))
         return
 
     try:
@@ -98,6 +117,7 @@ def load_project(ls: LanguageServer):
             "`pip install dbt-ls[postgres]`, then restart. "
             "Continuing with documented models only."
         )
+        ls.work_done_progress.end(token, types.WorkDoneProgressEnd(message="❌ImportError"))
     except Exception:  # noqa: BLE001 — enrichment must never crash initialize
         log.exception(
             "Database enrichment failed; continuing with documented models only"
@@ -113,6 +133,8 @@ def load_project(ls: LanguageServer):
             log.debug("Replaced sources with leftover sources")
         log.info("Finished parsing column info for models from database")
 
+    ls.work_done_progress.end(token, types.WorkDoneProgressEnd(message="Finished"))
+
 
 @server.feature(types.INITIALIZE)
 def on_initialize(ls: LanguageServer, params: types.ParameterInformation):
@@ -122,9 +144,6 @@ def on_initialize(ls: LanguageServer, params: types.ParameterInformation):
 @server.command("dbt-ls.reload")
 def reload(ls: LanguageServer):
     load_project(ls)
-    ls.window_show_message(
-        types.ShowMessageParams(types.MessageType(3), "dbt-ls: project reloaded")
-    )
 
 
 @server.command("dbt-ls.current_model")
