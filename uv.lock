@@ -525,7 +525,7 @@ wheels = [
 
 [[package]]
 name = "dbt-ls"
-version = "0.2.3a0"
+version = "0.2.4"
 source = { editable = "." }
 dependencies = [
     { name = "ibis-framework" },
