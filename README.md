@@ -1,5 +1,7 @@
 # DBT-Language-Server
 
+<img alt="DBT Language Server" src="https://vhs.charm.sh/vhs-1IEY4fW47S53ZaFfI9ri8B.gif" />
+
 ## Features
 
 | Feature | LSP method / command | Description |
