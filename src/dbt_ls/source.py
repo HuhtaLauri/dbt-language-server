@@ -17,15 +17,12 @@ class SourceTable:
 
 def discover_sources(root: str) -> list:
     sources = []
-    # plz don't scan target!!!!
     ignored_dirs = {"target", ".venv", "venv", ".git", "dbt_packages", "node_modules"}
     for p in Path(root).rglob("*.yml"):
         if ignored_dirs.intersection(p.parts) or not p.is_file():
             continue
-        # for your .claude directory you filthy vibecoder
         if any(part.startswith(".") for part in p.relative_to(root).parts[:-1]):
             continue
-        # bruh error handle this
         try:
             doc = yaml.safe_load(p.read_text())
         except yaml.YAMLError:
