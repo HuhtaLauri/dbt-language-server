@@ -248,9 +248,7 @@ def completions(ls: DbtLanguageServer, params: types.CompletionParams):
             types.CompletionItem(
                 label=c.name,
                 kind=types.CompletionItemKind(5),
-                label_details=types.CompletionItemLabelDetails(
-                    description=c.data_type
-                ),
+                label_details=types.CompletionItemLabelDetails(description=c.data_type),
             )
             for m in (*models, *sources)
             for c in m.columns

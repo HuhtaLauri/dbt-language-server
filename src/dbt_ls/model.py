@@ -15,6 +15,7 @@ from dbt_ls.profiles import (
     MSSQLTarget,
     SparkTarget,
     DatabricksTarget,
+    AthenaTarget,
 )
 from typing import Callable
 from ibis import BaseBackend
@@ -215,6 +216,40 @@ def get_databricks_models(
     return _get_databricks_schema(models, w, profile_target)
 
 
+def get_athena_models(
+    models: list[Model], profile_target: AthenaTarget, project_root: str | Path
+) -> tuple[list[Model], list[SourceTable]]:
+    import boto3
+
+    columns_by_name: dict[str, tuple[Column, ...]] = {}
+
+    client = boto3.client("athena")
+
+    tables = client.list_table_metadata(
+        CatalogName=profile_target.database, DatabaseName=profile_target.schema
+    )
+
+    for t in tables["TableMetadataList"]:
+        columns_by_name[t["Name"]] = tuple(
+            Column(name=c["Name"], data_type=c["Type"]) for c in (t["Columns"] or [])
+        )
+
+    leftover_sources = columns_by_name.keys() - [m.name for m in models]
+
+    return (
+        [
+            Model(name=m.name, path=m.path, columns=columns_by_name.get(m.name, ()))
+            for m in models
+        ],
+        [
+            SourceTable(
+                name=s, source_name="<unknown>", columns=columns_by_name.get(s, ())
+            )
+            for s in leftover_sources
+        ],
+    )
+
+
 _DATABASE_METHOD_REGISTRY: dict[
     str,
     Callable[..., tuple[list[Model], list[SourceTable]]],
@@ -225,6 +260,7 @@ _DATABASE_METHOD_REGISTRY: dict[
     "sqlserver": get_mssql_models,
     "spark": get_spark_models,
     "databricks": get_databricks_models,
+    "athena": get_athena_models,
 }
 
 

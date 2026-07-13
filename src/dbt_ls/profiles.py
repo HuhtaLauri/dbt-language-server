@@ -176,6 +176,18 @@ class DatabricksTarget(ProfileTarget):
             )
 
 
+@dataclass(kw_only=True)
+class AthenaTarget(ProfileTarget):
+    s3_staging_dir: str
+    s3_data_dir: str | None = None
+    region_name: str
+    schema: str
+    database: str
+    aws_profile_name: str | None = None
+    aws_access_key_id: str | None = None
+    aws_secret_access_key: Secret | None = None
+
+
 _TARGET_REGISTRY: dict[str, type[ProfileTarget]] = {
     "duckdb": DuckDBTarget,
     "postgres": DatabaseTarget,
@@ -183,6 +195,7 @@ _TARGET_REGISTRY: dict[str, type[ProfileTarget]] = {
     "sqlserver": MSSQLTarget,
     "spark": SparkTarget,
     "databricks": DatabricksTarget,
+    "athena": AthenaTarget,
 }
 
 

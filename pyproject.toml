@@ -1,6 +1,6 @@
 [project]
 name = "dbt-ls"
-version = "0.2.5"
+version = "0.2.6"
 description = "Databse aware DBT Language Server"
 readme = "README.md"
 authors = [
@@ -31,6 +31,10 @@ mysql = ["ibis-framework[mysql]>=12.0.0"]
 sqlserver = ["ibis-framework[mssql]>=12.0.0"]
 pyspark = ["ibis-framework[pyspark]>=12.0.0"]
 databricks = ["databricks-sdk>=0.120.0"]
+athena = [
+    "boto3>=1.43.46",
+    "botocore[crt]>=1.43.46",
+    ]
 all = [
     "ibis-framework[duckdb,postgres,mysql,mssql,databricks,pyspark]>=12.0.0",
     "databricks-sdk>=0.120.0"

@@ -3,7 +3,10 @@ import logging
 
 from dbt_ls import __version__
 from dbt_ls.server import server
+
 print(__version__)
+
+
 def main():
     banner = f"""
    ╔═══════════════════════════════════════╗
