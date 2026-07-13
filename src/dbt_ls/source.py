@@ -17,11 +17,18 @@ class SourceTable:
 
 def discover_sources(root: str) -> list:
     sources = []
+    ignored_dirs = {"target", ".venv", "venv", ".git", "dbt_packages", "node_modules"}
     for p in Path(root).rglob("*.yml"):
-        if "target" in p.parts or not p.is_file():
+        if ignored_dirs.intersection(p.parts) or not p.is_file():
             continue
-        doc = yaml.safe_load(p.read_text())
-        if not doc or "sources" not in doc:
+        if any(part.startswith(".") for part in p.relative_to(root).parts[:-1]):
+            continue
+        try:
+            doc = yaml.safe_load(p.read_text())
+        except yaml.YAMLError:
+            continue
+
+        if not doc or not isinstance(doc, dict) or "sources" not in doc:
             continue
         for src in doc["sources"]:
             source_name = src.get("name", "")
