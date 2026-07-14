@@ -1,10 +1,11 @@
-from pathlib import Path
-from dataclasses import dataclass, fields
-import yaml
-from typing import Any, Union, get_args, get_origin, get_type_hints
 import os
-from jinja2.sandbox import SandboxedEnvironment
+from dataclasses import dataclass, fields
+from pathlib import Path
 from types import UnionType
+from typing import Any, Union, get_args, get_origin, get_type_hints
+
+import yaml
+from jinja2.sandbox import SandboxedEnvironment
 
 
 class EnvVarError(Exception):
@@ -190,7 +191,7 @@ class AthenaTarget(ProfileTarget):
 
 @dataclass(kw_only=True)
 class GlueTarget(ProfileTarget):
-    project_name: str
+    project_name: str | None = None
     role_arn: str
     region: str
     workers: int
