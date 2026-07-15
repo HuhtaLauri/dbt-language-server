@@ -603,7 +603,6 @@ version = "0.2.7"
 source = { editable = "." }
 dependencies = [
     { name = "ibis-framework" },
-    { name = "isort" },
     { name = "jinja2" },
     { name = "packaging" },
     { name = "pygls" },
@@ -647,6 +646,7 @@ dev = [
     { name = "databricks-sdk" },
     { name = "hatch" },
     { name = "ibis-framework", extra = ["databricks", "duckdb", "mssql", "mysql", "postgres", "pyspark"] },
+    { name = "isort" },
     { name = "pytest" },
     { name = "twine" },
 ]
@@ -664,7 +664,6 @@ requires-dist = [
     { name = "ibis-framework", extras = ["mysql"], marker = "extra == 'mysql'", specifier = ">=12.0.0" },
     { name = "ibis-framework", extras = ["postgres"], marker = "extra == 'postgres'", specifier = ">=12.0.0" },
     { name = "ibis-framework", extras = ["pyspark"], marker = "extra == 'pyspark'", specifier = ">=12.0.0" },
-    { name = "isort", specifier = ">=8.0.1" },
     { name = "jinja2", specifier = ">=3.1.6" },
     { name = "packaging", specifier = ">=21.3" },
     { name = "pygls", specifier = ">=2.1.1" },
@@ -681,6 +680,7 @@ dev = [
     { name = "databricks-sdk", specifier = ">=0.120.0" },
     { name = "hatch", specifier = ">=1.16.5" },
     { name = "ibis-framework", extras = ["duckdb", "postgres", "mysql", "mssql", "databricks", "pyspark"], specifier = ">=12.0.0" },
+    { name = "isort", specifier = ">=8.0.1" },
     { name = "pytest", specifier = ">=9.0.3" },
     { name = "twine", specifier = ">=6.2.0" },
 ]

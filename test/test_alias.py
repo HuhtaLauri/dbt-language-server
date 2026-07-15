@@ -14,6 +14,24 @@ from dbt_ls.alias import parse_aliases
             {"a": "accounts", "o": "orders"},
         ),
         ("select 1", {}),
+        ("{{ ref('accounts') }} as a", {"a": "accounts"}),
+        (
+            "{{ ref('accounts') }} AS a join {{ ref('orders') }} o",
+            {"a": "accounts", "o": "orders"},
+        ),
+        ("{{ source('src', 'my_table') }} as t", {"t": "my_table"}),
+        (
+            "{{ source('src', 'accounts') }} AS a join {{ ref('orders') }} o",
+            {"a": "accounts", "o": "orders"},
+        ),
+        (
+            """
+        SELECT
+            *
+        FROM {{ ref('orders') }} o
+         """,
+            {"o": "orders"},
+        ),
     ],
 )
 def test_parse_aliases(text, expected):
