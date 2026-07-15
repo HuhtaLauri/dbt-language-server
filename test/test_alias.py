@@ -1,4 +1,5 @@
 import pytest
+
 from dbt_ls.alias import parse_aliases
 
 

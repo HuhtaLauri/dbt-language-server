@@ -10,11 +10,9 @@ from pygls.uris import to_fs_path
 
 from dbt_ls import __version__
 from dbt_ls.alias import parse_aliases
-from dbt_ls.model import (
-    discover_models,
-    enrich_models_from_database,
-    filter_documented_database_sources,
-)
+from dbt_ls.exceptions import *
+from dbt_ls.model import (discover_models, enrich_models_from_database,
+                          filter_documented_database_sources)
 from dbt_ls.pattern import completion_context, ref_model_at
 from dbt_ls.profiles import Profiles
 from dbt_ls.project import Project
@@ -49,33 +47,18 @@ def find_dbt_project_root(root: str) -> str:
     return "."
 
 
-def load_project(ls: DbtLanguageServer):
+def _load_project(root_path: str | None = None) -> ProjectState:
 
-    # Progress report setup
-    token = "reload-project" + str(uuid.uuid4())
-
-    if (
-        ls.client_capabilities.window
-        and ls.client_capabilities.window.work_done_progress
-    ):
-        ls.work_done_progress.create(token)
-        ls.work_done_progress.begin(
-            token,
-            types.WorkDoneProgressBegin(
-                title="Loading dbt project", cancellable=False, percentage=0
-            ),
-        )
-
-    root_path = ls.workspace.root_path
+    state = ProjectState()
 
     if not root_path:
         log.warning("Initialize received no root_path; skipping project discovery")
-        return
+        raise NoRootPathError
 
     dbt_root = find_dbt_project_root(root_path)
     if not dbt_root:
         log.warning("No dbt project root found under %s; skipping discovery", root_path)
-        return
+        raise NoDbtRootError
 
     project = Project(dbt_root)
 
@@ -94,19 +77,16 @@ def load_project(ls: DbtLanguageServer):
     else:
         log.info("No catalog.json at %s; skipping catalog enrichment", catalog_path)
 
-    ls.state.dbt_root = dbt_root
-    ls.state.project = project
-    ls.state.models = models
-    ls.state.sources = sources
+    state.dbt_root = dbt_root
+    state.project = project
+    state.models = models
+    state.sources = sources
 
     # Database enrichment — needs a fully resolved profile target.
     profile = Profiles.locate(project.root)
     if not profile:
         log.info("No dbt profile located; skipping database enrichment")
-        ls.work_done_progress.end(
-            token, types.WorkDoneProgressEnd(message="❌No profile found")
-        )
-        return
+        raise NoDbtProfileError
 
     profile_target = profile.resolve(project.profile)
     if not profile_target:
@@ -114,25 +94,30 @@ def load_project(ls: DbtLanguageServer):
             "Profile %r resolved to an empty target; skipping database enrichment",
             project.profile,
         )
-        ls.work_done_progress.end(
-            token, types.WorkDoneProgressEnd(message="❌Target empty")
-        )
-        return
+        raise NoDbtProfileTargetError
+
     log.info(f"Using profile: {profile_target}")
 
     try:
         database_models, leftover_sources = enrich_models_from_database(
             models, profile_target, project.root
         )
-    except ImportError:
+    except ImportError as exc:
+        # ibis wraps the real ModuleNotFoundError in its own ImportError, so
+        # walk the cause chain to find the name of the package actually missing.
+        missing = "unknown"
+        err: BaseException | None = exc
+        while err is not None:
+            if isinstance(err, ImportError) and err.name:
+                missing = err.name
+                break
+            err = err.__cause__ or err.__context__
         log.warning(
-            "Database enrichment skipped: the backend for this profile isn't "
-            "installed. Install the matching extra, e.g. "
-            "`pip install dbt-ls[postgres]`, then restart. "
-            "Continuing with documented models only."
-        )
-        ls.work_done_progress.end(
-            token, types.WorkDoneProgressEnd(message="❌ImportError")
+            "Database enrichment skipped: missing dependency %r (%s). "
+            "Install the matching extra, e.g. `pip install dbt-ls[postgres]`, "
+            "then restart. Continuing with documented models only.",
+            missing,
+            exc,
         )
     except Exception:  # noqa: BLE001 — enrichment must never crash initialize
         log.exception(
@@ -140,14 +125,52 @@ def load_project(ls: DbtLanguageServer):
         )
     else:
         if database_models:
-            ls.state.models = database_models
+            state.models = database_models
         if leftover_sources:
             documented_sources, undocumented_sources = (
                 filter_documented_database_sources(sources, leftover_sources)
             )
-            ls.state.sources = documented_sources
+            state.sources = documented_sources
             log.debug("Replaced sources with leftover sources")
         log.info("Finished parsing column info for models from database")
+
+    return state
+
+
+def load_project(ls: DbtLanguageServer):
+
+    # Progress report setup
+    token = "reload-project" + str(uuid.uuid4())
+
+    if (
+        ls.client_capabilities.window
+        and ls.client_capabilities.window.work_done_progress
+    ):
+        ls.work_done_progress.create(token)
+        ls.work_done_progress.begin(
+            token,
+            types.WorkDoneProgressBegin(
+                title="Loading dbt project", cancellable=False, percentage=0
+            ),
+        )
+
+    try:
+        ls.state = _load_project(ls.workspace.root_path)
+    except NoDbtProfileError:
+        ls.work_done_progress.end(
+            token, types.WorkDoneProgressEnd(message="❌No profile found")
+        )
+        return
+    except NoDbtProfileTargetError:
+        ls.work_done_progress.end(
+            token, types.WorkDoneProgressEnd(message="❌Target empty")
+        )
+    except ImportError:
+        ls.work_done_progress.end(
+            token, types.WorkDoneProgressEnd(message="❌ImportError")
+        )
+
+    # root_path = ls.workspace.root_path
 
     ls.work_done_progress.end(token, types.WorkDoneProgressEnd(message="Finished"))
 

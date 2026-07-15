@@ -1,5 +1,7 @@
 from typing import Literal
+
 import pytest
+
 from src.dbt_ls.pattern import completion_context, ref_model_at
 
 

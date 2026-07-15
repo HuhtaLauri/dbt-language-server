@@ -1,5 +1,6 @@
-from src.dbt_ls.model import discover_models, Model
 from pathlib import Path
+
+from src.dbt_ls.model import Model, discover_models
 
 
 def test_discover_models():

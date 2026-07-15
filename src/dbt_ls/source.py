@@ -1,7 +1,8 @@
-from dataclasses import dataclass
-import yaml
-from pathlib import Path
 import json
+from dataclasses import dataclass
+from pathlib import Path
+
+import yaml
 
 from dbt_ls.column import Column
 

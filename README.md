@@ -41,6 +41,8 @@ vim.lsp.enable("dbt_ls")
 - MySQL
 - Spark (Spark Connect, no auth)
 - Databricks
+- Athena
+- Glue
 
 > [!IMPORTANT]
 > Databricks supports two auth methods, resolved from your dbt profile:

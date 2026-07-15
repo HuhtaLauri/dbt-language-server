@@ -1,29 +1,20 @@
+import json
+import os
 from dataclasses import dataclass, replace
 from pathlib import Path
-from dbt_ls.column import Column
-import json
-from dbt_ls.profiles import ProfileTarget
-import ibis
-from ibis.expr.schema import Schema
-from ibis.expr.types.relations import (
-    Table,
-)
-from dbt_ls.profiles import (
-    DuckDBTarget,
-    DatabaseTarget,
-    MySQLTarget,
-    MSSQLTarget,
-    SparkTarget,
-    DatabricksTarget,
-    AthenaTarget,
-    GlueTarget,
-)
 from typing import Callable
-from ibis import BaseBackend
 
+import ibis
+from ibis import BaseBackend
+from ibis.expr.schema import Schema
+from ibis.expr.types.relations import Table
+
+from dbt_ls.column import Column
+from dbt_ls.profiles import (AthenaTarget, DatabaseTarget, DatabricksTarget,
+                             DuckDBTarget, GlueTarget, MSSQLTarget,
+                             MySQLTarget, ProfileTarget, SparkTarget)
 from dbt_ls.project import Project
 from dbt_ls.source import SourceTable
-import os
 
 
 @dataclass(frozen=True)

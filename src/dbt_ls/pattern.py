@@ -1,6 +1,5 @@
 import re
 
-
 REF_RE = re.compile(r"""ref\(\s*(?P<q>['"])(?P<model>[^'"]*)$""")
 # Full ref('model') call, used to find the model the cursor is *inside of*.
 REF_FULL_RE = re.compile(r"""ref\(\s*['"](?P<model>[^'"]+)['"]""")
